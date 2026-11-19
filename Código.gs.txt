@@ -1,11 +1,11 @@
 /**
  * KINDO DARK STORE HUB - BACKEND API OFICIAL
- * Versión: v3.5.0-gas
+ * Versión: v3.6.0-gas (sin eco del PIN en la respuesta de login)
  * Soporte para Layout en U, Bin Location, Logística Inversa, Packing, Labelling,
  * Costeo Logístico Directo y Medición de Lead Time (OTIF / SLA Tienda Nube).
  */
 
-var APP_VERSION = "v3.5.0-gas";
+var APP_VERSION = "v3.6.0-gas";
 
 function doGet(e) {
   return handleRequest(e);
@@ -69,10 +69,6 @@ function handleRequest(e) {
           status: "unauthorized",
           message: "PIN incorrecto o usuario inactivo en planilla.",
           version: APP_VERSION,
-          debug: {
-            pinRecibido: rawPin,
-            totalUsuariosEnSheet: Math.max(0, users.length - 1),
-          },
         },
         cb,
       );
