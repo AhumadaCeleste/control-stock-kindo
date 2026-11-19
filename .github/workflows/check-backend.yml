@@ -10,6 +10,6 @@ jobs:
         run: |
           for id in AKfycbzsYutP0_ivKRZlid07DoXPfiZiHbS7pZqJl9W37DQ0TjIvJHdcbf7FZlUPrt9iGZ3Z AKfycbxFWAZ00PqdswIasjKV0T_qT7yqUliFD-6EybpXVhslgxthhIiIzcJKU_TMLwYjMcek; do
             echo "=== $id"
-            curl -sSL -o out.txt -w "HTTP %{http_code} final=%{url_effective}\n" "https://script.google.com/macros/s/$id/exec?action=getStock&callback=cb" || true
+            curl -sSL -o out.txt -w "HTTP %{http_code} final=%{url_effective}\n" "https://script.google.com/macros/s/$id/exec?action=login&pin=6789&ip=CI-test&ua=github-actions&callback=cb" || true
             head -c 400 out.txt; echo
           done
