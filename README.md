@@ -5,7 +5,7 @@ Trabajo práctico de la Cátedra Logística y Medios de Pago (UTN FRC).
 
 - **App:** https://ahumadaceleste.github.io/control-stock-kindo/
 - **Informe del trabajo práctico:** [INFORME.md](INFORME.md)
-- **Planilla (base de datos):** [Google Sheets](https://docs.google.com/spreadsheets/d/1nBd4eo3RYftmdLqjy-d8laDXFnUQEt2fzUH_KYRw_dw/edit)
+- **Planilla (base de datos):** [Google Sheets](https://docs.google.com/spreadsheets/d/1WwYI8DMqHf3tyEuCnV-ealJwefoGn37YgRKfO7bpNV8/edit)
 
 ## Cómo usarla
 

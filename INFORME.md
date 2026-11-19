@@ -5,7 +5,7 @@ Docente: Lic. José I. Martino
 Integrantes: Eugenio Regis · Ahumada María Celeste · Burgos Brenda · Acosta Mariana
 
 **App en funcionamiento:** https://ahumadaceleste.github.io/control-stock-kindo/
-**Planilla de datos (Google Sheets):** https://docs.google.com/spreadsheets/d/1nBd4eo3RYftmdLqjy-d8laDXFnUQEt2fzUH_KYRw_dw/edit
+**Planilla de datos (Google Sheets):** https://docs.google.com/spreadsheets/d/1WwYI8DMqHf3tyEuCnV-ealJwefoGn37YgRKfO7bpNV8/edit
 **Código:** `index.html` (app web) · `Código.gs.txt` (backend en Google Apps Script)
 
 > Cada decisión se presenta con el criterio de la cátedra: **cómo** se aplica la herramienta, **por qué** se eligió y **para qué** sirve (qué objetivo resuelve). Cuando faltó un dato, el supuesto se aclara y se justifica.
