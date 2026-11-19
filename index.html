@@ -451,6 +451,44 @@
         color: var(--accent);
       }
 
+      /* v3.6.0 — Medios de pago y controles antifraude */
+      .tab-item { font-size: 0.6rem; }
+      .ctrl-box {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid var(--surface-border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        font-size: 0.8rem;
+      }
+      .ctrl-box h4 { font-size: 0.8rem; margin-bottom: 8px; color: var(--accent); }
+      .check-row {
+        display: flex; gap: 8px; align-items: flex-start;
+        margin: 6px 0; color: var(--text); line-height: 1.3; cursor: pointer;
+      }
+      .check-row input { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; }
+      .ctrl-status { font-size: 0.75rem; font-weight: 700; margin-top: 6px; min-height: 16px; }
+      .pay-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+      .pay-table th {
+        text-align: left; color: var(--text-muted); font-weight: 700;
+        border-bottom: 1px solid var(--surface-border); padding: 6px 4px;
+      }
+      .pay-table td {
+        padding: 7px 4px; border-bottom: 1px solid #1b2540;
+        font-family: "JetBrains Mono", monospace; vertical-align: top;
+      }
+      .pay-table td.lbl { font-family: inherit; }
+      .pay-table tr.best td { background: rgba(16, 185, 129, 0.12); }
+      .pay-table tr.out td { opacity: 0.45; }
+      .pay-note { font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; }
+      .reco-box {
+        border: 1px solid var(--success); border-radius: 12px;
+        padding: 12px 14px; font-size: 0.82rem; line-height: 1.5;
+        background: rgba(16, 185, 129, 0.08); margin-top: 12px;
+      }
+      .table-scroll { overflow-x: auto; }
+      .version-footer a { color: var(--accent); }
+
       /* Footer Discreto con Versiones */
       .version-footer {
         text-align: center;
@@ -762,7 +800,7 @@
               <select
                 id="dispatch-canal"
                 class="input-control"
-                onchange="calculateLogisticsCost()"
+                onchange="checkDispatchBtn()"
               >
                 <option value="Uber Flash (Cba Capital)">
                   🛵 Uber Flash (CBA) [+$3.800]
@@ -781,9 +819,37 @@
                 class="input-control"
                 value="1"
                 min="1"
-                oninput="calculateLogisticsCost()"
+                oninput="checkDispatchBtn()"
               />
             </div>
+          </div>
+
+          <!-- v3.6.0: CONTROL DE COBRO Y DE SALIDA (PREVENCIÓN DE FRAUDE Y FALTANTES) -->
+          <div class="ctrl-box" id="antifraud-box">
+            <h4>🛡 Control de cobro y de salida</h4>
+            <label class="field-label">Medio de pago de la orden</label>
+            <select id="dispatch-pago" class="input-control" onchange="calculateLogisticsCost()"></select>
+
+            <label class="check-row">
+              <input type="checkbox" id="chk-acreditado" onchange="checkDispatchBtn()" />
+              <span>Verifiqué que el dinero está <b>acreditado</b> en la cuenta (no solo "aprobado").</span>
+            </label>
+            <label class="check-row" id="row-domicilio">
+              <input type="checkbox" id="chk-domicilio" onchange="checkDispatchBtn()" />
+              <span>El domicilio de entrega coincide con el titular / DNI de la compra.</span>
+            </label>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px">
+              <div>
+                <label class="field-label">Peso esperado del bulto</label>
+                <div id="peso-esperado" style="font-family: 'JetBrains Mono', monospace; padding: 10px 0; font-weight: 700">—</div>
+              </div>
+              <div>
+                <label class="field-label">Peso real en balanza (kg)</label>
+                <input type="number" step="0.01" min="0" id="peso-real" class="input-control" placeholder="0.00" oninput="checkDispatchBtn()" />
+              </div>
+            </div>
+            <div class="ctrl-status" id="ctrl-status"></div>
           </div>
 
           <!-- TARJETA DE COSTOS LOGÍSTICOS DIRECTOS Y LEAD TIME -->
@@ -799,6 +865,10 @@
             <div class="cost-row">
               <span>Costo Logístico Directo Total:</span>
               <b id="c-total-log" style="color: var(--warning)">$5.000</b>
+            </div>
+            <div class="cost-row">
+              <span>Costo de cobro (comisión + IVA):</span>
+              <b id="c-cobro">$0</b>
             </div>
             <div class="cost-row">
               <span>Lead Time de Preparación:</span>
@@ -1027,6 +1097,50 @@
         </div>
       </section>
 
+      <!-- PESTAÑA 5 (v3.6.0): MEDIOS DE PAGO — COSTO REAL DE COBRAR -->
+      <section id="view-payments" style="display: none">
+        <div class="card" style="border-top: 4px solid var(--success)">
+          <h3 style="font-size: 1rem; margin-bottom: 4px">Costo de cobrar una venta</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px">
+            Comparamos cuánto se queda cada pasarela y cuánto nos llega realmente, según el plazo de acreditación.
+          </p>
+
+          <label class="field-label">Producto</label>
+          <select id="pay-product" class="input-control" onchange="renderPayments()"></select>
+
+          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 8px">
+            <div>
+              <label class="field-label">Unidades</label>
+              <input type="number" id="pay-cant" class="input-control" value="1" min="1" oninput="renderPayments()" />
+            </div>
+            <div>
+              <label class="field-label">¿Cuándo necesitamos la plata?</label>
+              <select id="pay-liquidez" class="input-control" onchange="renderPayments()">
+                <option value="1">Ya (≤ 1 día)</option>
+                <option value="14" selected>Hasta 14 días</option>
+                <option value="35">30 días o más</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="pay-summary" class="pay-note" style="margin-bottom: 10px"></div>
+          <div class="table-scroll">
+            <table class="pay-table">
+              <thead>
+                <tr><th>Pasarela / medio</th><th>Plazo</th><th>Com. c/IVA</th><th>Costo</th><th>Neto</th><th>% del margen</th></tr>
+              </thead>
+              <tbody id="pay-tbody"></tbody>
+            </table>
+          </div>
+          <div id="pay-reco" class="reco-box"></div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 0.95rem; margin-bottom: 8px">Supuestos y fuentes</h3>
+          <div class="pay-note" id="pay-sources"></div>
+        </div>
+      </section>
+
       <!-- MODAL DE RÓTULO DE BULTO / CAJA KRAFT (PRIORIDADES 4 Y 6) -->
       <div id="label-modal">
         <div class="label-box">
@@ -1103,13 +1217,15 @@
       <footer class="version-footer">
         <span
           >KINDO OPS // CLIENT:
-          <b class="version-tag" id="ver-client">v3.5.0-ui</b></span
+          <b class="version-tag" id="ver-client">v3.6.0-ui</b></span
         >
         &nbsp;|&nbsp;
         <span
           >BACKEND:
           <b class="version-tag" id="ver-backend">Conectando...</b></span
         >
+        <br />
+        <a href="https://github.com/AhumadaCeleste/control-stock-kindo/blob/main/INFORME.md" target="_blank" rel="noopener">📄 Informe del trabajo práctico</a>
       </footer>
     </main>
 
@@ -1127,6 +1243,9 @@
       <button class="tab-item" onclick="switchNav('reception', this)">
         <span>📥</span> Recepción
       </button>
+      <button class="tab-item" onclick="switchNav('payments', this)">
+        <span>💳</span> Pagos
+      </button>
       <button class="tab-item" onclick="forceLogout()">
         <span>🔒</span> Salir
       </button>
@@ -1134,7 +1253,7 @@
 
     <script>
       // CONTROL DE VERSIONES Y CONFIGURACIÓN
-      const HTML_VERSION = "v3.5.0-ui";
+      const HTML_VERSION = "v3.6.0-ui";
       const GAS_URL =
         "https://script.google.com/macros/s/AKfycbxFWAZ00PqdswIasjKV0T_qT7yqUliFD-6EybpXVhslgxthhIiIzcJKU_TMLwYjMcek/exec";
       const SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000;
@@ -1146,6 +1265,54 @@
         "Andreani (Federal)": 6200,
         "Retiro Dark Store": 0,
       };
+
+      // v3.6.0 — TASAS DE COBRO (comisión SIN IVA, en %). Relevadas en nov-2026.
+      // Supuesto: Tiendanube Plan Esencial. Se actualizan acá cuando cambian.
+      const IVA = 0.21;
+      const PAYMENT_OPTIONS = [
+        { id: "pn-1", pasarela: "Pago Nube", medio: "Tarjeta / MODO", dias: 1, tasa: 6.09 },
+        { id: "pn-7", pasarela: "Pago Nube", medio: "Tarjeta / MODO", dias: 7, tasa: 4.39 },
+        { id: "pn-14", pasarela: "Pago Nube", medio: "Tarjeta / MODO", dias: 14, tasa: 3.49 },
+        { id: "pn-30", pasarela: "Pago Nube", medio: "Tarjeta / MODO", dias: 30, tasa: 2.97 },
+        { id: "pn-tr", pasarela: "Pago Nube", medio: "Transferencia", dias: 1, tasa: 1.5 },
+        { id: "mp-0", pasarela: "Mercado Pago", medio: "Tarjeta crédito", dias: 0, tasa: 6.29 },
+        { id: "mp-10", pasarela: "Mercado Pago", medio: "Tarjeta crédito", dias: 10, tasa: 4.39 },
+        { id: "mp-18", pasarela: "Mercado Pago", medio: "Tarjeta crédito", dias: 18, tasa: 3.39 },
+        { id: "mp-35", pasarela: "Mercado Pago", medio: "Tarjeta crédito", dias: 35, tasa: 1.49 },
+        { id: "mp-cta", pasarela: "Mercado Pago", medio: "Dinero en cuenta", dias: 0, tasa: 0.8 },
+        { id: "uala", pasarela: "Ualá Bis", medio: "Cualquier tarjeta", dias: 0, tasa: 4.9 },
+        { id: "modo-deb", pasarela: "MODO (vía Payway)", medio: "Débito", dias: 1, tasa: 0.8 },
+        { id: "modo-cre", pasarela: "MODO (vía Payway)", medio: "Crédito", dias: 10, tasa: 1.8 },
+        { id: "goc", pasarela: "GOcuotas", medio: "Débito en 2-4 cuotas", dias: 7, tasa: 7.5, estimada: true },
+      ];
+
+      // Peso unitario estimado por categoría (kg) para control de salida por balanza.
+      const UNIT_WEIGHT = { Remeras: 0.25, Buzos: 0.6, Camperas: 0.9, Conjuntos: 0.8 };
+      const PACKAGING_WEIGHT = 0.15; // caja kraft + seda + cinta
+      const WEIGHT_TOLERANCE = 0.1; // ±10 %
+
+      // Catálogo de respaldo para el simulador si todavía no cargó la planilla
+      const FALLBACK_PRODUCTS = [
+        { sku: "KND-REM-OV-M-NG", desc: "Remera Oversize - M - Negro", cat: "Remeras", costo: 20160, pvp: 42000 },
+        { sku: "KND-BUZ-OV-M-NG", desc: "Buzo Oversize - M - Negro", cat: "Buzos", costo: 32640, pvp: 68000 },
+        { sku: "KND-CAM-OV-M-NG", desc: "Campera Oversize - M - Negro", cat: "Camperas", costo: 40800, pvp: 85000 },
+        { sku: "KND-CON-UR-M-GR", desc: "Conjunto Urbano - M - Gris", cat: "Conjuntos", costo: 45600, pvp: 95000 },
+      ];
+
+      function paymentLabel(o) {
+        const plazo = o.dias === 0 ? "al instante" : `${o.dias} día${o.dias > 1 ? "s" : ""}`;
+        return `${o.pasarela} · ${o.medio} · ${plazo}`;
+      }
+      function paymentRateWithIVA(o) {
+        return o.tasa * (1 + IVA);
+      }
+      function money(n) {
+        return "$" + Math.round(n).toLocaleString("es-AR");
+      }
+      function expectedWeight(item, cant) {
+        const unit = UNIT_WEIGHT[item.cat] || 0.4;
+        return unit * cant + PACKAGING_WEIGHT;
+      }
 
       let currentUser = null;
       let catalog = [];
@@ -1246,7 +1413,14 @@
         // Facturación estimada (PVP x Unidades) y Costo de Fabricación (CMV)
         const revenue = (item.pvp || 0) * cant;
         const cmvTotal = (item.costo || 0) * cant;
-        const netMarginValue = revenue - cmvTotal - totalLogCost;
+        const payOpt =
+          PAYMENT_OPTIONS.find(
+            (o) => o.id === document.getElementById("dispatch-pago").value,
+          ) || PAYMENT_OPTIONS[0];
+        const cobroCost = (revenue * paymentRateWithIVA(payOpt)) / 100;
+        const netMarginValue = Math.round(
+          revenue - cmvTotal - totalLogCost - cobroCost,
+        );
         const netMarginPct =
           revenue > 0 ? Math.round((netMarginValue / revenue) * 100) : 0;
 
@@ -1276,6 +1450,8 @@
           `$${fleteCost.toLocaleString("es-AR")}`;
         document.getElementById("c-total-log").innerText =
           `$${totalLogCost.toLocaleString("es-AR")}`;
+        document.getElementById("c-cobro").innerText =
+          `${money(cobroCost)} (${paymentRateWithIVA(payOpt).toFixed(2)}%)`;
         document.getElementById("c-lead-time").innerHTML =
           `${leadTimeMinutes} min <span class="sla-pill ${slaPillClass}">${slaStatusText}</span>`;
 
@@ -1290,6 +1466,64 @@
           marginNet: `$${netMarginValue.toLocaleString("es-AR")} (${netMarginPct}%)`,
           leadTime: `${leadTimeMinutes} min`,
           slaStatus: slaStatusText,
+          cobro: money(cobroCost),
+          pago: paymentLabel(payOpt),
+        };
+      }
+
+      // v3.6.0 — VALIDACIONES ANTIFRAUDE / FALTANTES ANTES DE DESPACHAR
+      function evaluateControls(item) {
+        const status = document.getElementById("ctrl-status");
+        const canal = document.getElementById("dispatch-canal").value;
+        const needsAddress = canal !== "Retiro Dark Store";
+        document.getElementById("row-domicilio").style.display = needsAddress
+          ? "flex"
+          : "none";
+
+        if (!item) {
+          document.getElementById("peso-esperado").innerText = "—";
+          status.innerText = "";
+          return { ok: false };
+        }
+        const cant =
+          parseInt(document.getElementById("dispatch-cant").value, 10) || 1;
+        const esperado = expectedWeight(item, cant);
+        document.getElementById("peso-esperado").innerText =
+          `${esperado.toFixed(2)} kg`;
+
+        const real = parseFloat(document.getElementById("peso-real").value);
+        const acreditado = document.getElementById("chk-acreditado").checked;
+        const domicilio =
+          !needsAddress || document.getElementById("chk-domicilio").checked;
+
+        const faltan = [];
+        if (!acreditado) faltan.push("confirmar el pago acreditado");
+        if (!domicilio) faltan.push("validar el domicilio");
+        let pesoOk = false;
+        let pesoMsg = "pesar el bulto";
+        if (!isNaN(real) && real > 0) {
+          const desvio = (real - esperado) / esperado;
+          if (Math.abs(desvio) <= WEIGHT_TOLERANCE) {
+            pesoOk = true;
+          } else {
+            pesoMsg =
+              desvio < 0
+                ? `revisar el bulto: pesa ${Math.round(-desvio * 100)}% menos (posible faltante)`
+                : `revisar el bulto: pesa ${Math.round(desvio * 100)}% más (posible sobrante)`;
+          }
+        }
+        if (!pesoOk) faltan.push(pesoMsg);
+
+        if (faltan.length === 0) {
+          status.style.color = "var(--success)";
+          status.innerText = "✓ Controles OK: se puede despachar.";
+        } else {
+          status.style.color = "var(--warning)";
+          status.innerText = "Falta: " + faltan.join(" · ");
+        }
+        return {
+          ok: faltan.length === 0,
+          peso: isNaN(real) ? "-" : `${real.toFixed(2)}kg/${esperado.toFixed(2)}kg`,
         };
       }
 
@@ -1302,6 +1536,7 @@
         if (!clean) {
           binBox.style.display = "none";
           document.getElementById("cost-breakdown-card").style.display = "none";
+          evaluateControls(null);
           btn.disabled = true;
           return;
         }
@@ -1313,8 +1548,8 @@
           document.getElementById("bin-location-desc").innerText =
             `${item.desc} — Clase ${item.abc} (${item.cat})`;
           binBox.style.display = "block";
-          btn.disabled = false;
           calculateLogisticsCost();
+          btn.disabled = !evaluateControls(item).ok;
         } else {
           binBox.style.display = "none";
           document.getElementById("cost-breakdown-card").style.display = "none";
@@ -1349,6 +1584,7 @@
       // GESTIÓN DE SESIÓN
       function verifySession() {
         document.getElementById("ver-client").innerText = HTML_VERSION;
+        populatePaymentSelects();
         initSimulatedOrderTime();
         fetchClientIP();
 
@@ -1498,6 +1734,9 @@
         const item = findCatalogItem(cleanCode);
         if (!item) return;
 
+        const controls = evaluateControls(item);
+        if (!controls.ok) return;
+
         // Calcular costo logístico y Lead Time
         const metricData = calculateLogisticsCost();
 
@@ -1518,9 +1757,16 @@
           minute: "2-digit",
           second: "2-digit",
         });
-        logBox.innerHTML = `<span style="color: var(--success); font-weight:700;">✓ [${time}]</span> Despachadas ${cant}u de <b>${item.desc}</b> (${canal}) — 🏷 Bulto: <b>${trackingId}</b><br><small style="color:#94a3b8;">Orden: ${orderId} | LeadTime: ${metricData.leadTime} (${metricData.slaStatus}) | MgNeto: ${metricData.marginNet}</small>`;
+        logBox.innerHTML = `<span style="color: var(--success); font-weight:700;">✓ [${time}]</span> Despachadas ${cant}u de <b>${item.desc}</b> (${canal}) — 🏷 Bulto: <b>${trackingId}</b><br><small style="color:#94a3b8;">Orden: ${orderId} | LeadTime: ${metricData.leadTime} (${metricData.slaStatus}) | Cobro: ${metricData.pago} (${metricData.cobro}) | Peso: ${controls.peso} | MgNeto: ${metricData.marginNet}</small>`;
+
+        // El backend v3.5.0 guarda orderId dentro del detalle del log:
+        // sumamos ahí los datos de cobro y de control para que queden auditados.
+        const orderAudit = `${orderId} | Pago: ${metricData.pago} ACREDITADO (${metricData.cobro}) | Peso: ${controls.peso} OK`;
 
         inputEl.value = "";
+        document.getElementById("chk-acreditado").checked = false;
+        document.getElementById("chk-domicilio").checked = false;
+        document.getElementById("peso-real").value = "";
         checkDispatchBtn();
         inputEl.focus();
 
@@ -1546,7 +1792,7 @@
             trackingId: trackingId,
             costLog: metricData.costLog,
             marginNet: metricData.marginNet,
-            orderId: orderId,
+            orderId: orderAudit,
             leadTime: metricData.leadTime,
             slaStatus: metricData.slaStatus,
             author: currentUser.nombre,
@@ -1819,6 +2065,118 @@
         });
       }
 
+      // v3.6.0 — SIMULADOR DE COSTO DE COBRO POR PASARELA
+      function populatePaymentSelects() {
+        const sel = document.getElementById("dispatch-pago");
+        if (sel && sel.options.length === 0) {
+          PAYMENT_OPTIONS.forEach((o) => {
+            const opt = document.createElement("option");
+            opt.value = o.id;
+            opt.textContent = `${paymentLabel(o)} (${paymentRateWithIVA(o).toFixed(2)}%)`;
+            sel.appendChild(opt);
+          });
+          sel.value = "pn-14";
+        }
+        const prodSel = document.getElementById("pay-product");
+        const source = catalog.length ? catalog : FALLBACK_PRODUCTS;
+        const prev = prodSel.value;
+        prodSel.innerHTML = "";
+        const seen = new Set();
+        source.forEach((p) => {
+          // Un producto por categoría/precio para no repetir talles y colores
+          const key = `${p.cat}-${p.pvp}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          const opt = document.createElement("option");
+          opt.value = p.sku;
+          opt.textContent = `${p.cat} — PVP ${money(p.pvp)}`;
+          prodSel.appendChild(opt);
+        });
+        if (prev && [...prodSel.options].some((o) => o.value === prev))
+          prodSel.value = prev;
+      }
+
+      function renderPayments() {
+        const source = catalog.length ? catalog : FALLBACK_PRODUCTS;
+        const sku = document.getElementById("pay-product").value;
+        const p = source.find((x) => x.sku === sku) || source[0];
+        const cant =
+          parseInt(document.getElementById("pay-cant").value, 10) || 1;
+        const maxDias = parseInt(
+          document.getElementById("pay-liquidez").value,
+          10,
+        );
+        const venta = p.pvp * cant;
+        const margenBruto = (p.pvp - p.costo) * cant;
+
+        const rows = PAYMENT_OPTIONS.map((o) => {
+          const pct = paymentRateWithIVA(o);
+          const costo = (venta * pct) / 100;
+          return {
+            o,
+            pct,
+            costo,
+            neto: venta - costo,
+            sobreMargen: margenBruto > 0 ? (costo / margenBruto) * 100 : 0,
+            dentro: o.dias <= maxDias,
+          };
+        }).sort((a, b) => a.costo - b.costo);
+
+        const elegibles = rows.filter((r) => r.dentro);
+        const mejor = elegibles[0];
+        const tarjetas = elegibles.filter((r) =>
+          /Tarjeta|Crédito|Cualquier/i.test(r.o.medio),
+        );
+        const mejorTarjeta = tarjetas[0];
+        const peorElegible = elegibles[elegibles.length - 1];
+
+        document.getElementById("pay-summary").innerHTML =
+          `Venta: <b>${money(venta)}</b> · Margen bruto (PVP − costo): <b>${money(margenBruto)}</b> · Se resaltan las opciones que acreditan dentro del plazo elegido.`;
+
+        const tbody = document.getElementById("pay-tbody");
+        tbody.innerHTML = rows
+          .map((r) => {
+            const cls = r === mejor ? "best" : r.dentro ? "" : "out";
+            const plazo =
+              r.o.dias === 0 ? "inst." : `${r.o.dias}d`;
+            return `<tr class="${cls}">
+              <td class="lbl"><b>${r.o.pasarela}</b><br><small>${r.o.medio}${r.o.estimada ? " *" : ""}</small></td>
+              <td>${plazo}</td>
+              <td>${r.pct.toFixed(2)}%</td>
+              <td>${money(r.costo)}</td>
+              <td>${money(r.neto)}</td>
+              <td>${r.sobreMargen.toFixed(1)}%</td>
+            </tr>`;
+          })
+          .join("");
+
+        let reco = "";
+        if (mejor) {
+          reco += `<b>Más barato dentro del plazo:</b> ${paymentLabel(mejor.o)} — cobrar nos cuesta ${money(mejor.costo)} y recibimos ${money(mejor.neto)}.`;
+          if (mejorTarjeta && mejorTarjeta !== mejor) {
+            const ahorro = mejorTarjeta.costo - mejor.costo;
+            const descuento = ((ahorro / 2) / venta) * 100;
+            reco += `<br><b>Para quien paga con tarjeta:</b> ${paymentLabel(mejorTarjeta.o)} (${money(mejorTarjeta.costo)}).`;
+            reco += `<br><b>Guiar al cliente:</b> la diferencia con tarjeta es ${money(ahorro)}. Si trasladamos la mitad como descuento (≈${descuento.toFixed(1)}% por pagar con ${mejor.o.medio.toLowerCase()}), el cliente paga menos y nosotros igual ahorramos ${money(ahorro / 2)}.`;
+          }
+          if (peorElegible && peorElegible !== mejor) {
+            reco += `<br><b>Brecha:</b> entre la opción más cara y la más barata del plazo hay ${money(peorElegible.costo - mejor.costo)} por venta (${(peorElegible.sobreMargen - mejor.sobreMargen).toFixed(1)} puntos del margen).`;
+          }
+        } else {
+          reco = "Ninguna opción acredita en ese plazo.";
+        }
+        document.getElementById("pay-reco").innerHTML = reco;
+
+        document.getElementById("pay-sources").innerHTML = `
+          • Comisiones relevadas en noviembre de 2026, <b>sin IVA</b> en la fuente; acá se suma IVA 21%.<br>
+          • Pago Nube: plan Esencial de Tiendanube (centro de ayuda de Tiendanube). Con Pago Nube no se paga el costo por transacción de Tiendanube; con otras pasarelas sí, y no está sumado acá.<br>
+          • Mercado Pago: Link de pago / Checkout Pro según plazo de liberación.<br>
+          • Ualá Bis: 4,9% + IVA con cualquier medio, acreditación al instante.<br>
+          • MODO vía Payway: aranceles de referencia de débito y crédito (requiere credenciales Payway).<br>
+          • * GOcuotas: comisión de referencia (≈7,5%) publicada en prensa; el valor real depende del contrato.<br>
+          • No incluye retenciones de IIBB/SIRTAC ni costo de contracargos.`;
+      }
+
       function switchNav(view, btn) {
         stopCamera();
         document.getElementById("view-dispatch").style.display =
@@ -1829,6 +2187,8 @@
           view === "stock" ? "block" : "none";
         document.getElementById("view-reception").style.display =
           view === "reception" ? "block" : "none";
+        document.getElementById("view-payments").style.display =
+          view === "payments" ? "block" : "none";
 
         document
           .querySelectorAll(".tab-item")
@@ -1836,6 +2196,10 @@
         btn.classList.add("active");
 
         if (view === "stock") renderStockView();
+        if (view === "payments") {
+          populatePaymentSelects();
+          renderPayments();
+        }
       }
 
       window.onload = verifySession;
