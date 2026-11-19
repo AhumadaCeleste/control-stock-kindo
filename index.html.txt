@@ -1676,9 +1676,32 @@
         }
 
         script.src = qs;
-        script.onerror = (e) => {
-          devLog("API", `Error en [${action}]`, e);
+        // v3.6.0: si el servidor no responde, avisamos en vez de quedar colgados
+        let done = false;
+        const fail = (why) => {
+          if (done) return;
+          done = true;
+          devLog("API", `Error en [${action}]: ${why}`);
           document.getElementById("kpi-sync").innerText = "🔴";
+          delete window[cbName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          callback({
+            status: "error",
+            message:
+              "No se pudo conectar con el servidor. Recargá la página e intentá de nuevo.",
+          });
+        };
+        const timer = setTimeout(() => fail("timeout"), 25000);
+        const origCb = window[cbName];
+        window[cbName] = function (data) {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          origCb(data);
+        };
+        script.onerror = () => {
+          clearTimeout(timer);
+          fail("script error");
         };
         document.body.appendChild(script);
       }
